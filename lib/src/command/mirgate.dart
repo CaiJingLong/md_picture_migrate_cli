@@ -4,6 +4,7 @@ import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:dio/dio.dart';
 import 'package:md_picture_migrate_cli/src/command/config.dart';
+import 'package:md_picture_migrate_cli/src/uploader/azure.dart';
 
 import '../utils.dart';
 
@@ -138,13 +139,22 @@ class MigrateCommand extends Command {
 
   Future<void> uploadToAzure(String endpoint, String token, String user,
       String email, List<String> srcUrls) async {
+    late final uploader = AzureUploader(endpoint, token);
     for (final url in srcUrls) {
       final file = await downloadPicture(url);
       if (file == null) {
         continue;
       }
-      final fileName = Uri.parse(url).pathSegments.last;
-      print('url: $url, fileName: $fileName');
+
+      final srcFileName = Uri.parse(url).pathSegments.last;
+      String ext;
+      if (srcFileName.contains('.')) {
+        ext = srcFileName.split('.').last;
+      } else {
+        ext = 'jpg';
+      }
+
+      await uploader.upload(user, email, url, file, ext);
     }
   }
 

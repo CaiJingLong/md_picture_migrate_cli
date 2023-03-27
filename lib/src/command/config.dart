@@ -64,8 +64,11 @@ class ConfigCommand extends Command {
 
   ConfigCommand() {
     argParser
+      ..addFlag('list',
+          help: 'List the current configuration.', defaultsTo: false)
       ..addOption('azure-endpoint',
-          help: 'The endpoint of the Azure Git repository.')
+          help:
+              'The endpoint of the Azure Git url. Such as: https://dev.azure.com/user/images/_git/MirrorImages')
       ..addOption('azure-token',
           help:
               'The personal access token for authenticating with the Azure Git repository.')
@@ -82,6 +85,17 @@ class ConfigCommand extends Command {
 
   @override
   void run() {
+    final list = argResults!['list'] as bool;
+
+    if (list) {
+      print('The config file: ${getConfigPath()}');
+      final map = _config.toJson();
+      map.forEach((key, value) {
+        print('$key: $value');
+      });
+      return;
+    }
+
     // Update configuration with new values
     _config.azureEndpoint =
         argResults!['azure-endpoint'] as String? ?? _config.azureEndpoint;

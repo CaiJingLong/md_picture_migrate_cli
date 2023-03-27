@@ -17,5 +17,8 @@ dependencies:
   args: ^2.3.1
   crypto: ^3.0.2
   dio: ^5.1.0
+  http: ^0.13.5
 
 
+executables:
+  md_picture_migrate_cli: bin/md_picture_migrate_cli.dart
