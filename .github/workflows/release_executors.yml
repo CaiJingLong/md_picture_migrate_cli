@@ -1,7 +1,6 @@
 name: Add binaries to release
 run-name: Add binaries to release ${{ github.event.release.tag_name }}
-env:
-  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 on:
   release:
     types:
@@ -17,3 +16,7 @@ jobs:
     steps:
       - name: Upload
         uses: caijinglong/action-dart-compile@v1
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      contents: write
