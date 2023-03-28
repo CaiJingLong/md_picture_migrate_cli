@@ -32,5 +32,5 @@ abstract class Uploader {
     return '$ms.$ext';
   }
 
-  Future<String> uploadPicture(String srcUrl, File file);
+  Future<String> uploadPicture(String srcImageUrl, File file);
 }

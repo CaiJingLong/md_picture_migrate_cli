@@ -136,9 +136,9 @@ class AzureUploader extends Uploader {
   }
 
   @override
-  Future<String> uploadPicture(String srcUrl, File file) {
+  Future<String> uploadPicture(String srcImageUrl, File file) {
     final ext = file.path.split('.').last;
-    return _upload(username, srcUrl, file, ext);
+    return _upload(username, srcImageUrl, file, ext);
   }
 }
 
