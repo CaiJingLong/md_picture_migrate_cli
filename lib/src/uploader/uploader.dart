@@ -11,10 +11,26 @@ abstract class Uploader {
         continue;
       }
 
-      final remoteImageUrl = await uploadPicture(url);
+      final imageCacheFile = File(getImageCachedPath(url));
+
+      final remoteImageUrl = await uploadPicture(url, imageCacheFile);
       file.writeAsStringSync(remoteImageUrl);
     }
   }
 
-  Future<String> uploadPicture(String url);
+  String getExtension(String url) {
+    if (url.contains('.')) {
+      return url.split('.').last;
+    } else {
+      return 'png';
+    }
+  }
+
+  String getImageName(String url) {
+    final ext = getExtension(url);
+    final ms = DateTime.now().millisecondsSinceEpoch;
+    return '$ms.$ext';
+  }
+
+  Future<String> uploadPicture(String srcUrl, File file);
 }

@@ -7,10 +7,13 @@ import 'package:md_picture_migrate_cli/src/utils.dart';
 class Config {
   String? azureEndpoint;
   String? azureToken;
+  String? azureUser;
+
   String? githubEndpoint;
   String? githubToken;
-  String? email;
-  String? azureUser;
+  String? githubUser;
+  bool? useJsdelivr;
+
   String? type;
 
   Config();
@@ -20,8 +23,9 @@ class Config {
         azureToken = json['azure-token'],
         githubEndpoint = json['github-endpoint'],
         githubToken = json['github-token'],
-        email = json['email'],
+        githubUser = json['github-user'],
         azureUser = json['azure-user'],
+        useJsdelivr = json['use-jsdelivr'] ?? true,
         type = json['type'];
 
   factory Config.fromCache() {
@@ -40,10 +44,11 @@ class Config {
   Map<String, dynamic> toJson() => {
         'azure-endpoint': azureEndpoint,
         'azure-token': azureToken,
+        'azure-user': azureUser,
         'github-endpoint': githubEndpoint,
         'github-token': githubToken,
-        'email': email,
-        'azure-user': azureUser,
+        'github-user': githubUser,
+        'use-jsdelivr': useJsdelivr ?? true,
         'type': type,
       };
 
@@ -78,7 +83,10 @@ class ConfigCommand extends Command {
       ..addOption('github-token',
           help:
               'The personal access token for authenticating with the Github repository.')
-      ..addOption('email', help: 'The email for git commits.')
+      ..addFlag('use-jsdelivr',
+          help: 'Use jsdelivr to accelerate the image loading.',
+          defaultsTo: true)
+      ..addOption('github-user', help: 'The user for Github.')
       ..addOption('type',
           help: 'The type of the repository. (azure or github)');
   }
@@ -108,7 +116,6 @@ class ConfigCommand extends Command {
         argResults!['github-endpoint'] as String? ?? _config.githubEndpoint;
     _config.githubToken =
         argResults!['github-token'] as String? ?? _config.githubToken;
-    _config.email = argResults!['email'] as String? ?? _config.email;
 
     // Write configuration to file in JSON format
     _config.save();
