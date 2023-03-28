@@ -56,3 +56,9 @@ String getImageCachedPath(String srcUrl) {
   final cachePath = '$imageDir/$subPath/$sha';
   return cachePath;
 }
+
+String getImageRemoteCachedPath(String srcUrl) {
+  final cacheFile = getImageCachedPath(srcUrl);
+  final cachePath = '$cacheFile.upload';
+  return cachePath;
+}

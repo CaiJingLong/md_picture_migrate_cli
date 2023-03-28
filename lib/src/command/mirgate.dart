@@ -5,7 +5,9 @@ import 'package:args/command_runner.dart';
 import 'package:dio/dio.dart';
 import 'package:md_picture_migrate_cli/src/command/config.dart';
 import 'package:md_picture_migrate_cli/src/uploader/azure.dart';
+import 'package:md_picture_migrate_cli/src/uploader/github.dart';
 
+import '../uploader/uploader.dart';
 import '../utils.dart';
 
 class MigrateCommand extends Command {
@@ -73,7 +75,8 @@ class MigrateCommand extends Command {
     }
 
     if (upload) {
-      await uploadPictures(srcUrls);
+      final uploader = makeUploader();
+      await uploader.upload(srcUrls);
     }
 
     if (replace) {
@@ -137,57 +140,40 @@ class MigrateCommand extends Command {
     return value;
   }
 
-  Future<void> uploadToAzure(String endpoint, String token, String user,
-      String email, List<String> srcUrls) async {
-    late final uploader = AzureUploader(endpoint, token);
-    for (final url in srcUrls) {
-      final file = await downloadPicture(url);
-      if (file == null) {
-        continue;
-      }
-
-      final srcFileName = Uri.parse(url).pathSegments.last;
-      String ext;
-      if (srcFileName.contains('.')) {
-        ext = srcFileName.split('.').last;
-      } else {
-        ext = 'jpg';
-      }
-
-      await uploader.upload(user, email, url, file, ext);
-    }
-  }
-
-  Future<void> uploadToGithub(String endpoint, String token, String user,
-      String email, List<String> srcUrls) async {}
-
-  Future<void> uploadPictures(List<String> srcUrls) async {
-    final type = checkConfigParam('type', config.type);
-    final user = checkConfigParam('user', config.user);
-    final email = checkConfigParam('email', config.email);
-
+  Uploader makeUploader() {
+    final type = config.type;
     switch (type) {
       case 'azure':
-        {
-          final endpoint =
-              checkConfigParam('azureEndpoint', config.azureEndpoint);
-          final token = checkConfigParam('azureToken', config.azureToken);
-
-          await uploadToAzure(endpoint, token, user, email, srcUrls);
-          break;
-        }
+        return AzureUploader(config);
       case 'github':
-        {
-          final token = checkConfigParam('githubToken', config.githubToken);
-          final repo = checkConfigParam('githubRepo', config.githubEndpoint);
-          await uploadToGithub(repo, token, user, email, srcUrls);
-          break;
-        }
-      default:
-        print('Unknown type: $type');
-        break;
+        return GithubUploader(config);
     }
+    throw Exception('Unknown uploader type: $type');
   }
 
-  Future<void> replacePictures(String directory, List<String> srcUrls) async {}
+  Future<void> replacePictures(String directory, List<String> srcUrls) async {
+    final dir = Directory(directory);
+    final files = dir.listSync(recursive: true);
+
+    for (final file in files) {
+      if (file is File) {
+        try {
+          final content = file.readAsStringSync();
+          var newContent = content;
+          for (final srcUrl in srcUrls) {
+            final newUrl = File(getImageRemoteCachedPath(srcUrl))
+                .readAsStringSync()
+                .trim();
+            newContent = newContent.replaceAll(srcUrl, newUrl);
+          }
+          file.writeAsStringSync(newContent);
+
+          print('Replaced $file');
+        } catch (e) {
+          print('Failed to replace $file');
+          print('Error: $e');
+        }
+      }
+    }
+  }
 }

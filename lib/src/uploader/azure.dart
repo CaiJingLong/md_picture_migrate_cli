@@ -2,44 +2,43 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:md_picture_migrate_cli/src/uploader/uploader.dart';
 import 'package:md_picture_migrate_cli/src/utils.dart';
 
-class AzureUploader {
-  final String endpoint;
+import '../command/config.dart';
 
-  final String token;
+class AzureUploader extends Uploader {
+  final Config config;
 
-  AzureUploader(this.endpoint, this.token);
+  AzureUploader(this.config)
+      : assert(config.azureEndpoint != null),
+        assert(config.azureUser != null),
+        assert(config.azureToken != null);
+
+  String get endpoint => config.azureEndpoint!;
+  String get token => config.azureToken!;
+  String get username => config.azureUser!;
 
   late final _Converter converter = _Converter(endpoint);
 
-  final dio = Dio()
-    ..options.headers = {
-      'Content-Type': 'application/json-patch+json',
-    };
-
-  String? _projectId;
-  String? _repositoryId;
+  final dio = Dio();
 
   String get organization => converter.organization;
-  String get project => _projectId ?? converter.project;
-  String get repository => _repositoryId ?? converter.repository;
+  String get project => converter.project;
+  String get repository => converter.repository;
 
-  bool _init = false;
+  Uri get api => Uri.parse(
+        'https://dev.azure.com/$organization/$project/_apis/git/repositories/$repository',
+      );
 
-  Future<void> refreshIds() async {
-    if (_init) {
-      return;
-    }
-    final api =
-        'https://dev.azure.com/$organization/$project/_apis/git/repositories/$repository?api-version=7.0';
+  Uri makeUri(String path, Map<String, String> params) {
+    final uri = Uri.parse(
+      'https://dev.azure.com/$organization/$project/_apis/git/repositories/$repository/$path',
+    );
 
-    return dio.getUri(Uri.parse(api)).then((response) {
-      final Map map = response.data;
-      _projectId = map['project']['id'];
-      _repositoryId = map['id'];
-      _init = true;
-    });
+    params['api-version'] = '7.0';
+
+    return uri.replace(queryParameters: params);
   }
 
   Future<String> getLastOldId() async {
@@ -47,43 +46,38 @@ class AzureUploader {
       return newId!;
     }
 
-    final org = organization;
-    final project = this.project;
-    final repository = this.repository;
+    final uri = makeUri('refs', {
+      '\$top': '1',
+      'filterContains': 'main',
+    });
 
-    final api =
-        'https://dev.azure.com/$org/$project/_apis/git/repositories/$repository/commits?api-version=7.0';
-
-    final response = await dio.getUri(Uri.parse(api));
+    final response = await dio.getUri(uri);
 
     final Map map = await response.data;
-    return map['value'][0]['commitId'];
+    return map['value'][0]['objectId'];
   }
 
   String? newId;
 
-  Future<void> upload(
-      String user, String email, String srcUrl, File file, String ext) async {
-    await refreshIds();
-
-    final uploadCacheFile = File(getImageCachedPath(srcUrl) + '.upload');
+  Future<String> _upload(
+    String username,
+    String srcUrl,
+    File file,
+    String ext,
+  ) async {
+    final uploadCacheFile = File(getImageRemoteCachedPath(srcUrl));
 
     if (uploadCacheFile.existsSync()) {
-      return;
+      return uploadCacheFile.readAsStringSync().trim();
     }
-
-    final org = organization;
-    final project = this.project;
-    final repository = this.repository;
 
     final oldId = await getLastOldId();
 
     final fileName = '${DateTime.now().millisecondsSinceEpoch}.$ext';
 
-    final api =
-        'https://dev.azure.com/$org/$project/_apis/git/repositories/$repository/pushes?api-version=5.0';
+    final uri = makeUri('pushes', {});
 
-    final basicToken = base64Encode(utf8.encode('$user:$token'));
+    final basicToken = base64Encode(utf8.encode('$organization:$token'));
 
     final headers = <String, String>{'Authorization': 'basic $basicToken'};
 
@@ -114,7 +108,7 @@ class AzureUploader {
     };
 
     final response = await dio.postUri(
-      Uri.parse(api),
+      uri,
       data: json.encode(requestMap),
       options: Options(
         headers: headers,
@@ -129,21 +123,27 @@ class AzureUploader {
 
     newId = map['refUpdates'][0]['newObjectId'];
 
-    final rawUrl =
-        'https://dev.azure.com/$org/$project/_apis/git/repositories/$repository/items?path=/$fileName&api-version=7.0';
+    final imageUrl = makeUri('items', {
+      'path': '/$fileName',
+      'versionDescriptor[versionOptions]': '0',
+      'versionDescriptor[versionType]': '0',
+      'versionDescriptor[version]': 'main',
+      'resolveLfs': 'true',
+      '\$format': 'octetStream',
+    });
 
-    if (!uploadCacheFile.existsSync()) {
-      uploadCacheFile.createSync(recursive: true);
-    }
+    return imageUrl.toString();
+  }
 
-    uploadCacheFile.writeAsStringSync(rawUrl);
-
-    print('uploaded $srcUrl to $rawUrl');
+  @override
+  Future<String> uploadPicture(String url) {
+    final file = File(getImageCachedPath(url));
+    final ext = file.path.split('.').last;
+    return _upload(username, url, file, ext);
   }
 }
 
 class _Converter {
-  /// https://dev.azure.com/user/images/_git/MirrorImages
   final String endpoint;
 
   _Converter(this.endpoint);

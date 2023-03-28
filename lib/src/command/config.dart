@@ -10,7 +10,7 @@ class Config {
   String? githubEndpoint;
   String? githubToken;
   String? email;
-  String? user;
+  String? azureUser;
   String? type;
 
   Config();
@@ -21,7 +21,7 @@ class Config {
         githubEndpoint = json['github-endpoint'],
         githubToken = json['github-token'],
         email = json['email'],
-        user = json['user'],
+        azureUser = json['azure-user'],
         type = json['type'];
 
   factory Config.fromCache() {
@@ -43,7 +43,7 @@ class Config {
         'github-endpoint': githubEndpoint,
         'github-token': githubToken,
         'email': email,
-        'user': user,
+        'azure-user': azureUser,
         'type': type,
       };
 
@@ -72,13 +72,13 @@ class ConfigCommand extends Command {
       ..addOption('azure-token',
           help:
               'The personal access token for authenticating with the Azure Git repository.')
+      ..addOption('azure-user', help: 'The user for Auzre.')
       ..addOption('github-endpoint',
           help: 'The endpoint of the Github repository.')
       ..addOption('github-token',
           help:
               'The personal access token for authenticating with the Github repository.')
       ..addOption('email', help: 'The email for git commits.')
-      ..addOption('user', help: 'The user for git commits.')
       ..addOption('type',
           help: 'The type of the repository. (azure or github)');
   }
@@ -101,12 +101,14 @@ class ConfigCommand extends Command {
         argResults!['azure-endpoint'] as String? ?? _config.azureEndpoint;
     _config.azureToken =
         argResults!['azure-token'] as String? ?? _config.azureToken;
+    _config.azureUser =
+        argResults!['azure-user'] as String? ?? _config.azureUser;
+
     _config.githubEndpoint =
         argResults!['github-endpoint'] as String? ?? _config.githubEndpoint;
     _config.githubToken =
         argResults!['github-token'] as String? ?? _config.githubToken;
     _config.email = argResults!['email'] as String? ?? _config.email;
-    _config.user = argResults!['user'] as String? ?? _config.user;
 
     // Write configuration to file in JSON format
     _config.save();

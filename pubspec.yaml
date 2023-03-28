@@ -21,4 +21,4 @@ dependencies:
 
 
 executables:
-  md_picture_migrate_cli: bin/md_picture_migrate_cli.dart
+  mdm: md_picture_migrate_cli.dart
