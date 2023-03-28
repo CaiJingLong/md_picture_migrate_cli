@@ -1,6 +1,6 @@
 name: md_picture_migrate_cli
 description: A command-line tool for migrating pictures in markdown files.
-version: 1.0.0
+version: 1.0.1
 homepage: https://github.com/CaiJingLong/md_picture_migrate_cli
 # publish_to: https://pub.dev
 
